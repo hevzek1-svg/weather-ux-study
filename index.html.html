@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>שאלון חווית משתמש – מזג האוויר</title>
+<style>
+  :root {
+    --deep: #1B3A5C;
+    --mid: #3D6E96;
+    --light: #EAF2F8;
+    --sun: #E8A33D;
+    --ink: #1C2B36;
+    --line: #D6E2EA;
+    --green: #2E6E52;
+    --green-light: #EAF5EF;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: linear-gradient(180deg, var(--deep) 0%, var(--mid) 240px, #F4F7FA 240px);
+    color: var(--ink);
+    min-height: 100vh;
+  }
+
+  header {
+    padding: 44px 24px 32px;
+    text-align: center;
+    color: white;
+  }
+  header .icon { font-size: 44px; display: block; margin-bottom: 12px; }
+  header h1 { font-size: 24px; font-weight: 700; margin-bottom: 10px; }
+  header p { font-size: 14px; opacity: 0.88; max-width: 480px; margin: 0 auto; line-height: 1.7; }
+
+  .progress-bar {
+    height: 4px;
+    background: rgba(255,255,255,0.2);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--sun);
+    width: 0%;
+    transition: width .4s ease;
+  }
+
+  .wrap { max-width: 640px; margin: 0 auto; padding: 0 20px 80px; }
+
+  .step {
+    display: none;
+    animation: fadeIn .3s ease;
+  }
+  .step.active { display: block; }
+  @keyframes fadeIn { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform:none; } }
+
+  .card {
+    background: white;
+    border-radius: 14px;
+    padding: 28px 26px;
+    margin-top: -48px;
+    margin-bottom: 16px;
+    box-shadow: 0 4px 20px rgba(27,58,92,0.1);
+  }
+
+  .step-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .6px;
+    color: var(--mid);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .q-text {
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.5;
+    color: var(--deep);
+    margin-bottom: 20px;
+  }
+  .q-sub {
+    font-size: 13px;
+    color: #6A7E8A;
+    margin-top: -14px;
+    margin-bottom: 18px;
+    line-height: 1.6;
+  }
+
+  textarea {
+    width: 100%;
+    border: 1.5px solid var(--line);
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-size: 14px;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 120px;
+    background: #FAFCFD;
+    color: var(--ink);
+    direction: rtl;
+    transition: border-color .15s;
+    line-height: 1.7;
+  }
+  textarea:focus { outline: none; border-color: var(--mid); background: white; }
+  textarea::placeholder { color: #B5C5CE; }
+
+  .radio-group { display: flex; flex-direction: column; gap: 10px; }
+  .radio-group label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 13px 16px;
+    border: 1.5px solid var(--line);
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all .15s;
+    background: #FAFCFD;
+  }
+  .radio-group input { accent-color: var(--mid); width:18px; height:18px; flex-shrink:0; }
+  .radio-group label:has(input:checked) {
+    border-color: var(--mid);
+    background: var(--light);
+    font-weight: 600;
+    color: var(--deep);
+  }
+
+  .scale-wrap { margin-top: 4px; }
+  .scale {
+    display: flex;
+    gap: 8px;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .scale label { flex:1; text-align:center; }
+  .scale input { display:none; }
+  .scale .opt {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 12px 4px;
+    border: 1.5px solid var(--line);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .scale .opt .num { font-size: 17px; font-weight: 700; color: var(--mid); }
+  .scale input:checked + .opt { border-color: var(--mid); background: var(--light); }
+  .scale input:checked + .opt .num { color: var(--deep); }
+  .scale-captions { display: flex; justify-content: space-between; font-size: 11px; color: #8A9AA5; }
+
+  .nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 24px;
+    gap: 12px;
+  }
+  .btn {
+    border: none;
+    border-radius: 10px;
+    padding: 13px 28px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .btn-next { background: var(--deep); color: white; flex: 1; }
+  .btn-next:hover { background: var(--mid); }
+  .btn-next:disabled { background: #A8B8C2; cursor: not-allowed; }
+  .btn-back { background: var(--light); color: var(--deep); padding: 13px 20px; }
+  .btn-back:hover { background: var(--line); }
+
+  .step-counter {
+    font-size: 12px;
+    color: #8A9AA5;
+    text-align: center;
+    margin-top: 14px;
+  }
+
+  .thanks {
+    text-align: center;
+    padding: 60px 20px 80px;
+  }
+  .thanks .big { font-size: 56px; display:block; margin-bottom:18px; }
+  .thanks h2 { font-size: 22px; color: var(--deep); margin-bottom: 12px; }
+  .thanks p { color: #5A6E7A; font-size: 14px; line-height: 1.8; max-width: 400px; margin: 0 auto; }
+
+  .error-msg {
+    color: #C0392B;
+    font-size: 12px;
+    margin-top: 10px;
+    display: none;
+  }
+</style>
+</head>
+<body>
+
+<div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+
+<header>
+  <span class="icon">⛅</span>
+  <h1>שאלון חווית משתמש<br>אתרי מזג אוויר</h1>
+  <p>כמה שאלות קצרות על החוויה שלך עם אתרי תחזית מזג האוויר. לוקח כ-5 דקות, אין תשובות נכונות או לא נכונות.</p>
+</header>
+
+<div class="wrap">
+
+  <!-- Step 1 -->
+  <div class="step active" id="step-1">
+    <div class="card">
+      <div class="step-label">חלק א' — הרגלים</div>
+      <div class="q-text">מתי לאחרונה בדקת תחזית מזג אוויר? מה גרם לך לבדוק?</div>
+      <div class="q-sub">ספר/י בחופשיות — הכי טוב לתת דוגמה אמיתית מהחיים.</div>
+      <textarea id="q1" placeholder="לדוגמה: אתמול לפני שיצאתי לטיול, רציתי לדעת אם יהיה גשם..."></textarea>
+      <div class="error-msg" id="err1">נא לכתוב תשובה קצרה לפני המשך</div>
+    </div>
+    <div class="nav">
+      <button class="btn btn-next" onclick="next(1)">המשך ←</button>
+    </div>
+    <div class="step-counter">שאלה 1 מתוך 8</div>
+  </div>
+
+  <!-- Step 2 -->
+  <div class="step" id="step-2">
+    <div class="card">
+      <div class="step-label">חלק א' — הרגלים</div>
+      <div class="q-text">איזה מידע מזג אוויר הכי חשוב לך?</div>
+      <div class="q-sub">מה הכי גורם לך לשנות תוכניות בגלל תחזית?</div>
+      <textarea id="q2" placeholder="לדוגמה: בעיקר גשם, כי אני רוכב/ת אופניים לעבודה. או: טמפרטורה, כי יש לי ילדים קטנים..."></textarea>
+    </div>
+    <div class="nav">
+      <button class="btn btn-back" onclick="prev(2)">→ חזרה</button>
+      <button class="btn btn-next" onclick="next(2)">המשך ←</button>
+    </div>
+    <div class="step-counter">שאלה 2 מתוך 8</div>
+  </div>
+
+  <!-- Step 3 -->
+  <div class="step" id="step-3">
+    <div class="card">
+      <div class="step-label">חלק ב' — האתר israelweather.co.il</div>
+      <div class="q-text">האם אתה/את מכיר/ה את האתר israelweather.co.il? מה הקשר שלך אליו?</div>
+      <div class="q-sub">אם לא מכיר/ה — מוזמן/ת לפתוח אותו עכשיו בכרטיסייה חדשה ואז לחזור לענות.</div>
+      <div class="radio-group">
+        <label><input type="radio" name="familiarity" value="משתמש קבוע"><span>משתמש/ת קבוע/ה — נכנס/ת לעיתים קרובות</span></label>
+        <label><input type="radio" name="familiarity" value="נכנס לפעמים"><span>נכנס/ת לפעמים, לא קבוע/ה</span></label>
+        <label><input type="radio" name="familiarity" value="נכנס לראשונה"><span>זו הפעם הראשונה שנכנסתי</span></label>
+        <label><input type="radio" name="familiarity" value="לא מכיר"><span>לא מכיר/ה את האתר</span></label>
+      </div>
+      <div class="error-msg" id="err3">נא לבחור אחת מהאפשרויות</div>
+    </div>
+    <div class="nav">
+      <button class="btn btn-back" onclick="prev(3)">→ חזרה</button>
+      <button class="btn btn-next" onclick="next(3)">המשך ←</button>
+    </div>
+    <div class="step-counter">שאלה 3 מתוך 8</div>
+  </div>
+
+  <!-- Step 4 -->
+  <div class="step" id="step-4">
+    <div class="card">
+      <div class="step-label">חלק ב' — חוויה באתר</div>
+      <div class="q-text">האם היה רגע שהתבלבלת או לא ידעת מה לעשות באתר?</div>
+      <div class="q-sub">אם כן — ספר/י מה ניסית לעשות, מה קרה, ואיך הרגשת.</div>
+      <textarea id="q4" placeholder="לדוגמה: ניסיתי למצוא את מזג האוויר לחיפה אבל לא הצלחתי להבין איפה ללחוץ..."></textarea>
+    </div>
+    <div class="nav">
+      <button class="btn btn-back" onclick="prev(4)">→ חזרה</button>
+      <button class="btn btn-next" onclick="next(4)">המשך ←</button>
+    </div>
+    <div class="step-counter">שאלה 4 מתוך 8</div>
+  </div>
+
+  <!-- Step 5 — Task 1 -->
+  <div class="step" id="step-5">
+    <div class="card">
+      <div class="step-label">חלק ג' — משימה קצרה</div>
+      <div class="q-text">כנס/י לאתר israelweather.co.il ומצא/י את התחזית לעיר שבה אתה/את גר/ה לשבוע הקרוב.</div>
+      <div class="q-sub">אחרי שמצאת — ענה/י: כמה קל היה למצוא את זה?</div>
+      <div class="scale-wrap">
+        <div class="scale">
+          <label><input type="radio" name="t1_ease" value="1"><span class="opt"><span class="num">1</span></span></label>
+          <label><input type="radio" name="t1_ease" value="2"><span class="opt"><span class="num">2</span></span></label>
+          <label><input type="radio" name="t1_ease" value="3"><span class="opt"><span class="num">3</span></span></label>
+          <label><input type="radio" name="t1_ease" value="4"><span class="opt"><span class="num">4</span></span></label>
+          <label><input type="radio" name="t1_ease" value="5"><span class="opt"><span class="num">5</span></span></label>
+        </div>
+        <div class="scale-captions"><span>קשה מאוד</span><span>קל מאוד</span></div>
+      </div>
+      <textarea id="q5" style="margin-top:16px;" placeholder="מה עשית? מה היה קל / קשה?"></textarea>
+    </div>
+    <div class="nav">
+      <button class="btn btn-back" onclick="prev(5)">→ חזרה</button>
+      <button class="btn btn-next" onclick="next(5)">המשך ←</button>
+    </div>
+    <div class="step-counter">שאלה 5 מתוך 8</div>
+  </div>
+
+  <!-- Step 6 — Task 2 -->
+  <div class="step" id="step-6">
+    <div class="card">
+      <div class="step-label">חלק ג' — משימה קצרה</div>
+      <div class="q-text">כנס/י לאתר ומצא/י את תחזית הגלים / מצב הים לסוף השבוע.</div>
+      <div class="q-sub">אחרי שחיפשת (הצלחת או לא) — ענה/י: כמה קל היה?</div>
+      <div class="scale-wrap">
+        <div class="scale">
+          <label><input type="radio" name="t2_ease" value="1"><span class="opt"><span class="num">1</span></span></label>
+          <label><input type="radio" name="t2_ease" value="2"><span class="opt"><span class="num">2</span></span></label>
+          <label><input type="radio" name="t2_ease" value="3"><span class="opt"><span class="num">3</span></span></label>
+          <label><input type="radio" name="t2_ease" value="4"><span class="opt"><span class="num">4</span></span></label>
+          <label><input type="radio" name="t2_ease" value="5"><span class="opt"><span class="num">5</span></span></label>
+        </div>
+        <div class="scale-captions"><span>קשה מאוד</span><span>קל מאוד</span></div>
+      </div>
+      <textarea id="q6" style="margin-top:16px;" placeholder="מה ניסית לעשות? האם מצאת? מה הקשה עליך?"></textarea>
+    </div>
+    <div class="nav">
+      <button class="btn btn-back" onclick="prev(6)">→ חזרה</button>
+      <button class="btn btn-next" onclick="next(6)">המשך ←</button>
+    </div>
+    <div class="step-counter">שאלה 6 מתוך 8</div>
+  </div>
+
+  <!-- Step 7 -->
+  <div class="step" id="step-7">
+    <div class="card">
+      <div class="step-label">חלק ד' — ציפיות</div>
+      <div class="q-text">אם היית יכול/ה לשנות דבר אחד בדף הבית של האתר — מה זה היה?</div>
+      <textarea id="q7" placeholder="לדוגמה: הייתי שם חיפוש עיר גדול באמצע, או מסיר/ה את כל הפרסומות..."></textarea>
+    </div>
+    <div class="nav">
+      <button class="btn btn-back" onclick="prev(7)">→ חזרה</button>
+      <button class="btn btn-next" onclick="next(7)">המשך ←</button>
+    </div>
+    <div class="step-counter">שאלה 7 מתוך 8</div>
+  </div>
+
+  <!-- Step 8 -->
+  <div class="step" id="step-8">
+    <div class="card">
+      <div class="step-label">שאלה אחרונה</div>
+      <div class="q-text">בהשוואה לאפליקציות / אתרים אחרים שבהם את/ה משתמש/ת לתחזית — מה האתר הזה עושה טוב יותר? ומה פחות?</div>
+      <textarea id="q8" placeholder="לדוגמה: יש יותר מידע ממה שהכרתי, אבל קשה למצוא אותו..."></textarea>
+    </div>
+    <div class="nav">
+      <button class="btn btn-back" onclick="prev(8)">→ חזרה</button>
+      <button class="btn btn-next" onclick="submit()">שליחה ✓</button>
+    </div>
+    <div class="step-counter">שאלה 8 מתוך 8</div>
+  </div>
+
+  <!-- Thanks -->
+  <div class="step" id="step-thanks">
+    <div class="thanks">
+      <span class="big">🌤️</span>
+      <h2>תודה רבה!</h2>
+      <p>התשובות שלך נשמרו ויעזרו מאוד לשיפור חוויית המשתמש באתרי תחזית מזג האוויר.<br><br>אפשר לסגור את הדף.</p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const TOTAL = 8;
+let current = 1;
+
+function showStep(n) {
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById(n === 'thanks' ? 'step-thanks' : `step-${n}`);
+  if (el) el.classList.add('active');
+  const pct = n === 'thanks' ? 100 : ((n-1) / TOTAL) * 100;
+  document.getElementById('progressFill').style.width = pct + '%';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function validate(n) {
+  if (n === 1) {
+    const v = document.getElementById('q1').value.trim();
+    document.getElementById('err1').style.display = v ? 'none' : 'block';
+    return !!v;
+  }
+  if (n === 3) {
+    const v = document.querySelector('input[name="familiarity"]:checked');
+    document.getElementById('err3').style.display = v ? 'none' : 'block';
+    return !!v;
+  }
+  return true;
+}
+
+function next(n) {
+  if (!validate(n)) return;
+  current = n + 1;
+  showStep(current);
+}
+
+function prev(n) {
+  current = n - 1;
+  showStep(current);
+}
+
+async function submit() {
+  const data = {
+    id: 'p_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+    timestamp: new Date().toISOString(),
+    q1_מתי_בדקת_תחזית: document.getElementById('q1').value,
+    q2_מידע_חשוב: document.getElementById('q2').value,
+    q3_היכרות_אתר: document.querySelector('input[name="familiarity"]:checked')?.value || '',
+    q4_רגע_בלבול: document.getElementById('q4').value,
+    t1_קלות_מציאת_עיר: document.querySelector('input[name="t1_ease"]:checked')?.value || '',
+    t1_הערות: document.getElementById('q5').value,
+    t2_קלות_מציאת_ים: document.querySelector('input[name="t2_ease"]:checked')?.value || '',
+    t2_הערות: document.getElementById('q6').value,
+    q7_שינוי_אחד: document.getElementById('q7').value,
+    q8_השוואה: document.getElementById('q8').value,
+  };
+
+  try {
+    await window.storage.set(data.id, JSON.stringify(data), true);
+  } catch(e) {
+    console.error('storage error', e);
+  }
+
+  showStep('thanks');
+}
+</script>
+
+</body>
+</html>
