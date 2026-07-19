@@ -360,6 +360,17 @@
     </div>
   </div>
 
+  <!-- Dashboard -->
+  <div class="step" id="step-dashboard">
+    <div class="card" style="margin-top:24px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding-bottom:14px; border-bottom:2px solid var(--line);">
+        <h2 style="font-size:18px; color:var(--deep);">📊 לוח בקרה — תשובות משתתפים</h2>
+        <button onclick="loadDashboard()" style="background:var(--light); border:none; border-radius:8px; padding:8px 14px; cursor:pointer; font-size:13px; color:var(--deep); font-weight:600;">🔄 רענן</button>
+      </div>
+      <div id="dashboardContent" style="color:#5A6E7A; text-align:center; padding:30px;">טוען...</div>
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -424,7 +435,108 @@ async function submit() {
 
   showStep('thanks');
 }
+
+// ── Dashboard ──
+// גישה ללוח הבקרה: הוסיפי ?dashboard לסוף ה-URL
+if (window.location.search.includes('dashboard')) {
+  document.addEventListener('DOMContentLoaded', () => {
+    showStep('dashboard');
+    loadDashboard();
+  });
+}
+
+async function loadDashboard() {
+  const el = document.getElementById('dashboardContent');
+  el.innerHTML = '<div style="padding:30px; text-align:center; color:#8A9AA5;">טוען תשובות...</div>';
+
+  try {
+    const list = await window.storage.list('p_', true);
+    if (!list || !list.keys || list.keys.length === 0) {
+      el.innerHTML = '<div style="padding:30px; text-align:center; color:#8A9AA5;">אין תשובות עדיין.</div>';
+      return;
+    }
+
+    const responses = [];
+    for (const key of list.keys) {
+      try {
+        const r = await window.storage.get(key, true);
+        if (r) responses.push(JSON.parse(r.value));
+      } catch(e) {}
+    }
+
+    responses.sort((a,b) => b.timestamp?.localeCompare(a.timestamp));
+    const n = responses.length;
+
+    const avg = field => {
+      const vals = responses.map(r => parseFloat(r[field])).filter(v => !isNaN(v));
+      return vals.length ? (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1) : '—';
+    };
+
+    const famCount = {};
+    responses.forEach(r => {
+      const v = r.q3_היכרות_אתר || 'לא צוין';
+      famCount[v] = (famCount[v]||0)+1;
+    });
+
+    let html = `
+      <div style="background:var(--light); border-radius:10px; padding:16px 20px; margin-bottom:20px; display:flex; gap:24px; flex-wrap:wrap;">
+        <div style="text-align:center;"><div style="font-size:28px; font-weight:700; color:var(--deep);">${n}</div><div style="font-size:12px; color:#6A7E8A;">משתתפים</div></div>
+        <div style="text-align:center;"><div style="font-size:28px; font-weight:700; color:var(--deep);">${avg('t1_קלות_מציאת_עיר')}</div><div style="font-size:12px; color:#6A7E8A;">קלות מציאת עיר (1-5)</div></div>
+        <div style="text-align:center;"><div style="font-size:28px; font-weight:700; color:var(--deep);">${avg('t2_קלות_מציאת_ים')}</div><div style="font-size:12px; color:#6A7E8A;">קלות מציאת ים (1-5)</div></div>
+      </div>
+
+      <h3 style="font-size:14px; font-weight:700; color:var(--deep); margin-bottom:12px;">היכרות עם האתר</h3>
+      <div style="margin-bottom:20px;">
+        ${Object.entries(famCount).map(([k,v]) => `
+          <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--line); font-size:13px;">
+            <span>${k}</span><strong>${v}</strong>
+          </div>`).join('')}
+      </div>
+
+      <h3 style="font-size:14px; font-weight:700; color:var(--deep); margin-bottom:12px;">תשובות מפורטות לפי משתתף</h3>
+    `;
+
+    responses.forEach((r, i) => {
+      const date = r.timestamp ? new Date(r.timestamp).toLocaleDateString('he-IL', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'}) : '';
+      html += `
+        <details style="margin-bottom:10px; border:1.5px solid var(--line); border-radius:10px; overflow:hidden;">
+          <summary style="padding:12px 16px; cursor:pointer; font-weight:600; font-size:13px; background:#FAFCFD; display:flex; justify-content:space-between; align-items:center;">
+            <span>משתתף ${i+1} — ${r.q3_היכרות_אתר || ''}</span>
+            <span style="font-size:11px; color:#8A9AA5; font-weight:400;">${date}</span>
+          </summary>
+          <div style="padding:16px; display:flex; flex-direction:column; gap:12px;">
+            ${[
+              ['מתי לאחרונה בדקת תחזית?', r.q1_מתי_בדקת_תחזית],
+              ['איזה מידע הכי חשוב?', r.q2_מידע_חשוב],
+              ['היכרות עם האתר', r.q3_היכרות_אתר],
+              ['רגע של בלבול', r.q4_רגע_בלבול],
+              ['קלות מציאת עיר (1-5)', r.t1_קלות_מציאת_עיר],
+              ['הערות — מציאת עיר', r.t1_הערות],
+              ['קלות מציאת ים (1-5)', r.t2_קלות_מציאת_ים],
+              ['הערות — מציאת ים', r.t2_הערות],
+              ['דבר אחד שהיה משנה', r.q7_שינוי_אחד],
+              ['השוואה לאתרים אחרים', r.q8_השוואה],
+            ].filter(([,v]) => v).map(([label, val]) => `
+              <div>
+                <div style="font-size:11px; font-weight:700; color:var(--mid); margin-bottom:3px;">${label}</div>
+                <div style="font-size:13px; background:var(--light); border-radius:6px; padding:8px 12px; line-height:1.6;">${val}</div>
+              </div>
+            `).join('')}
+          </div>
+        </details>
+      `;
+    });
+
+    el.innerHTML = html;
+  } catch(err) {
+    el.innerHTML = `<div style="color:#C0392B; padding:20px;">שגיאה בטעינת הנתונים: ${err.message}</div>`;
+  }
+}
 </script>
 
 </body>
 </html>
+
+
+
+
